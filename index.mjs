@@ -20,6 +20,7 @@ import { sign as cryptoSign } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const ASC_BASE = "https://api.appstoreconnect.apple.com/v1";
+const MAX_RESPONSE_CHARS = 5970; // App Store Connect responseBody maxLength
 
 export const TOOLS = [
   {
@@ -139,7 +140,13 @@ export async function callTool(name, args, { token, fetchImpl = fetch }) {
         include: "response",
       };
       if (args.territory) query["filter[territory]"] = args.territory;
-      if (args.rating !== undefined) query["filter[rating]"] = args.rating;
+      if (args.rating !== undefined) {
+        const r = Number(args.rating);
+        if (!Number.isInteger(r) || r < 1 || r > 5) {
+          throw new Error("rating must be an integer from 1 to 5");
+        }
+        query["filter[rating]"] = r;
+      }
       const data = await asc("GET", `/apps/${encodeURIComponent(args.appId)}/customerReviews`, {
         token,
         fetchImpl,
@@ -176,6 +183,9 @@ export async function callTool(name, args, { token, fetchImpl = fetch }) {
     case "respond_to_review": {
       if (!args.reviewId) throw new Error("reviewId is required");
       if (!args.responseBody) throw new Error("responseBody is required");
+      if (args.responseBody.length > MAX_RESPONSE_CHARS) {
+        throw new Error(`responseBody exceeds the ${MAX_RESPONSE_CHARS}-character App Store limit`);
+      }
       const data = await asc("POST", "/customerReviewResponses", {
         token,
         fetchImpl,
@@ -210,12 +220,26 @@ export async function callTool(name, args, { token, fetchImpl = fetch }) {
 
 // ─── stdio JSON-RPC transport (runs only when executed directly) ───
 
+let cachedKey; // { path, pem } — avoid re-reading + re-parsing the .p8 every call
+function readPrivateKey(keyPath) {
+  if (cachedKey && cachedKey.path === keyPath) return cachedKey.pem;
+  let pem;
+  try {
+    pem = readFileSync(keyPath, "utf-8");
+  } catch {
+    // Don't surface the on-disk path to the model.
+    throw new Error("Could not read the App Store Connect private key file.");
+  }
+  cachedKey = { path: keyPath, pem };
+  return pem;
+}
+
 function tokenFromEnv() {
   const issuerId = process.env.APP_STORE_CONNECT_ISSUER_ID;
   const keyId = process.env.APP_STORE_CONNECT_KEY_ID;
   const keyPath = process.env.APP_STORE_CONNECT_PRIVATE_KEY_PATH;
   if (!issuerId || !keyId || !keyPath) return undefined;
-  return mintToken({ issuerId, keyId, privateKey: readFileSync(keyPath, "utf-8") });
+  return mintToken({ issuerId, keyId, privateKey: readPrivateKey(keyPath) });
 }
 
 function send(msg) {
@@ -273,7 +297,11 @@ function main() {
       } catch {
         continue;
       }
-      handle(req).catch(() => {});
+      handle(req).catch(() => {
+        if (req && req.id !== undefined && req.id !== null) {
+          send({ jsonrpc: "2.0", id: req.id, error: { code: -32603, message: "Internal error" } });
+        }
+      });
     }
   });
 }

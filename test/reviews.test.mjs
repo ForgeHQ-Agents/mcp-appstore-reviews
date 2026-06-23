@@ -109,6 +109,22 @@ test("errors without credentials, on unknown tool, and on missing required args"
   assert.equal(calls.length, 0);
 });
 
+test("list_reviews rejects an out-of-range rating before calling the API", async () => {
+  const { fetchImpl, calls } = stubFetch({});
+  await assert.rejects(() => callTool("list_reviews", { appId: "1", rating: 6 }, { token, fetchImpl }), /1 to 5/i);
+  await assert.rejects(() => callTool("list_reviews", { appId: "1", rating: 0 }, { token, fetchImpl }), /1 to 5/i);
+  assert.equal(calls.length, 0);
+});
+
+test("respond_to_review rejects an over-long responseBody before calling the API", async () => {
+  const { fetchImpl, calls } = stubFetch({});
+  await assert.rejects(
+    () => callTool("respond_to_review", { reviewId: "r", responseBody: "x".repeat(5971) }, { token, fetchImpl }),
+    /5970-character/i,
+  );
+  assert.equal(calls.length, 0);
+});
+
 test("mints a valid ES256 JWT that verifies against the public key", () => {
   const { privateKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
   const pem = privateKey.export({ type: "pkcs8", format: "pem" });

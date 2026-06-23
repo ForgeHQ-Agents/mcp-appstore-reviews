@@ -1,0 +1,31 @@
+{
+  "name": "appstore-reviews",
+  "version": "1.0.0",
+  "description": "Read Apple App Store customer reviews and publish or delete developer responses (reviews-only).",
+  "servers": [
+    {
+      "name": "appstore-reviews",
+      "type": "mcp_server",
+      "command": "node",
+      "args": ["index.mjs"],
+      "credentials": [
+        {
+          "key": "APP_STORE_CONNECT_ISSUER_ID",
+          "description": "Issuer ID from App Store Connect → Users and Access → Integrations → App Store Connect API",
+          "required": true
+        },
+        {
+          "key": "APP_STORE_CONNECT_KEY_ID",
+          "description": "Key ID of the App Store Connect API key you created",
+          "required": true
+        },
+        {
+          "key": "APP_STORE_CONNECT_PRIVATE_KEY_PATH",
+          "description": "The .p8 private key file downloaded when you created the API key",
+          "required": true,
+          "type": "file"
+        }
+      ]
+    }
+  ]
+}

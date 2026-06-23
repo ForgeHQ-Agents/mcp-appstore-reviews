@@ -1,0 +1,36 @@
+{
+  "name": "mcp-appstore-reviews",
+  "version": "1.0.0",
+  "description": "Reviews-only MCP server for the Apple App Store (App Store Connect API): read customer reviews and publish or delete developer responses.",
+  "type": "module",
+  "bin": {
+    "mcp-appstore-reviews": "index.mjs"
+  },
+  "main": "index.mjs",
+  "files": [
+    "index.mjs",
+    "manegr-plugin.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node index.mjs",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "app-store",
+    "app-store-connect",
+    "reviews",
+    "ios"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ForgeHQ-Agents/mcp-appstore-reviews.git"
+  }
+}

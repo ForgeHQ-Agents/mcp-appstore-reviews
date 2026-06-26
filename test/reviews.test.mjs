@@ -135,6 +135,23 @@ test("mints a valid ES256 JWT that verifies against the public key", () => {
   assert.deepEqual(header, { alg: "ES256", kid: "KID123", typ: "JWT" });
   const payload = JSON.parse(Buffer.from(p, "base64url").toString());
   assert.equal(payload.iss, "iss");
+  assert.equal(payload.sub, undefined);
+  assert.equal(payload.aud, "appstoreconnect-v1");
+  const pub = createPublicKey(pem);
+  const ok = verify("sha256", Buffer.from(`${h}.${p}`), { key: pub, dsaEncoding: "ieee-p1363" }, Buffer.from(s, "base64url"));
+  assert.ok(ok, "ES256 signature should verify");
+});
+
+test("mints an individual-key JWT (sub:user, no iss) when no issuer is given", () => {
+  const { privateKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
+  const pem = privateKey.export({ type: "pkcs8", format: "pem" });
+  const jwt = mintToken({ keyId: "KID123", privateKey: pem });
+  const [h, p, s] = jwt.split(".");
+  const header = JSON.parse(Buffer.from(h, "base64url").toString());
+  assert.deepEqual(header, { alg: "ES256", kid: "KID123", typ: "JWT" });
+  const payload = JSON.parse(Buffer.from(p, "base64url").toString());
+  assert.equal(payload.sub, "user");
+  assert.equal(payload.iss, undefined);
   assert.equal(payload.aud, "appstoreconnect-v1");
   const pub = createPublicKey(pem);
   const ok = verify("sha256", Buffer.from(`${h}.${p}`), { key: pub, dsaEncoding: "ieee-p1363" }, Buffer.from(s, "base64url"));

@@ -28,12 +28,20 @@ file (`index.mjs`).
 ## Authentication
 
 Create an App Store Connect API key (Users and Access → Integrations → App Store
-Connect API). Use the **Customer Support** role — it can manage reviews without
-the broader powers of Admin. Then provide:
+Connect API). Two kinds of key work:
+
+- **Team key** — needs the **Customer Support** role (enough to manage reviews
+  without Admin's broader powers), but only an Admin can generate it. Supply the
+  Issuer ID along with the Key ID and `.p8`.
+- **Individual key** — any user can generate their own (no Admin needed) and it
+  inherits that user's permissions. It has **no Issuer ID**: leave
+  `APP_STORE_CONNECT_ISSUER_ID` unset and supply just the Key ID and `.p8`.
+
+Then provide:
 
 | Env var | What |
 | --- | --- |
-| `APP_STORE_CONNECT_ISSUER_ID` | Issuer ID shown at the top of the Integrations page |
+| `APP_STORE_CONNECT_ISSUER_ID` | Issuer ID shown at the top of the Integrations page — **team keys only**; omit for individual keys |
 | `APP_STORE_CONNECT_KEY_ID` | Key ID of the API key |
 | `APP_STORE_CONNECT_PRIVATE_KEY_PATH` | Path to the downloaded `.p8` private key file |
 

@@ -7,8 +7,9 @@
 // or beta-tester tool — adding one would widen what the App Store Connect API
 // key can do, so don't. Scope the key narrowly too (least privilege).
 //
-// Auth: an ES256 JWT is minted on each call from the .p8 private key + issuer
-// and key IDs (App Store Connect API). The key is read from the path in
+// Auth: an ES256 JWT is minted on each call from the .p8 private key + key ID
+// (App Store Connect API), plus the issuer ID for team keys (individual keys
+// have none). The key is read from the path in
 // APP_STORE_CONNECT_PRIVATE_KEY_PATH and is never logged or written elsewhere;
 // only the short-lived signed JWT leaves the process, as a Bearer token to Apple.
 //
@@ -89,8 +90,11 @@ const b64url = (input) => Buffer.from(input).toString("base64url");
 export function mintToken({ issuerId, keyId, privateKey }) {
   const now = Math.floor(Date.now() / 1000);
   const header = b64url(JSON.stringify({ alg: "ES256", kid: keyId, typ: "JWT" }));
+  // Team keys (Admin-generated) are scoped by issuer; individual keys (any user
+  // can self-generate, no issuer exists) instead authenticate as sub: "user".
+  const base = { iat: now, exp: now + 1200, aud: "appstoreconnect-v1" };
   const payload = b64url(
-    JSON.stringify({ iss: issuerId, iat: now, exp: now + 1200, aud: "appstoreconnect-v1" }),
+    JSON.stringify(issuerId ? { iss: issuerId, ...base } : { sub: "user", ...base }),
   );
   const signingInput = `${header}.${payload}`;
   const signature = cryptoSign("sha256", Buffer.from(signingInput), {
@@ -238,7 +242,8 @@ function tokenFromEnv() {
   const issuerId = process.env.APP_STORE_CONNECT_ISSUER_ID;
   const keyId = process.env.APP_STORE_CONNECT_KEY_ID;
   const keyPath = process.env.APP_STORE_CONNECT_PRIVATE_KEY_PATH;
-  if (!issuerId || !keyId || !keyPath) return undefined;
+  // Issuer is optional — individual keys don't have one.
+  if (!keyId || !keyPath) return undefined;
   return mintToken({ issuerId, keyId, privateKey: readPrivateKey(keyPath) });
 }
 
